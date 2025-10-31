@@ -3,19 +3,20 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
-
 const bookingsRoutes = require('./routes/bookings');
 
 const app = express();
+
+// Environment variables
 const PORT = process.env.PORT || 5000;
-const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGODB_URI || '';
+const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  console.error('Missing MONGODB_URI in environment. Add it to .env');
+  console.error('❌ Missing MONGODB_URI in environment. Add it to your .env file');
   process.exit(1);
 }
 
-// Connect DB
+// Connect to MongoDB
 connectDB(MONGODB_URI);
 
 // Middlewares
@@ -25,20 +26,30 @@ app.use(express.json());
 // Routes
 app.use('/api/bookings', bookingsRoutes);
 
-// Root
+// Root route
 app.get('/', (req, res) => {
-  res.status(200).json({ success: true, message: 'Synergia Bookings API is running' });
+  res.status(200).json({
+    success: true,
+    message: '✅ Synergia Bookings API is running smoothly 🚀',
+  });
 });
 
-// 404 fallback
+// 404 Fallback route
 app.use((req, res) => {
-  res.status(404).json({ success: false, message: 'Route not found' });
+  res.status(404).json({
+    success: false,
+    message: '❌ Route not found',
+  });
 });
 
-// Error handler (optional enhanced)
+// Global Error Handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ success: false, message: 'Server error' });
+  console.error('🔥 Unhandled server error:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Internal Server Error',
+  });
 });
 
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+// Start server
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
