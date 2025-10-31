@@ -1,55 +1,97 @@
-// server.js
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const connectDB = require('./config/db');
-const bookingsRoutes = require('./routes/bookings');
+import express from "express";
+import dotenv from "dotenv";
+import { connectDB } from "./config/db.js";
+import { Booking } from "./models/Booking.js";
+
+dotenv.config(); // Load .env
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-// Environment variables
-const PORT = process.env.PORT || 5000;
-const MONGODB_URI = process.env.MONGODB_URI;
-
-if (!MONGODB_URI) {
-  console.error('❌ Missing MONGODB_URI in environment. Add it to your .env file');
-  process.exit(1);
-}
-
-// Connect to MongoDB
-connectDB(MONGODB_URI);
-
-// Middlewares
-app.use(cors());
 app.use(express.json());
+connectDB();
 
-// Routes
-app.use('/api/bookings', bookingsRoutes);
-
-// Root route
-app.get('/', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: '✅ Synergia Bookings API is running smoothly 🚀',
-  });
+app.get("/", (req, res) => {
+  res.send("Welcome to the Synergia Event Booking API");
 });
 
-// 404 Fallback route
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: '❌ Route not found',
-  });
+
+app.post("/api/bookings", async (req, res) => {
+  try {
+    const booking = new Booking(req.body);
+    await booking.save();
+    res.status(201).json({ message: "Booking created successfully", booking });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
 });
 
-// Global Error Handler
-app.use((err, req, res, next) => {
-  console.error('🔥 Unhandled server error:', err);
-  res.status(500).json({
-    success: false,
-    message: 'Internal Server Error',
-  });
+
+app.get("/api/bookings", async (req, res) => {
+  try {
+    const bookings = await Booking.find();
+    res.status(200).json(bookings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Start server
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.get("/api/bookings/filter", async (req, res) => {
+  try {
+    const { event } = req.query;
+    if (!event) return res.status(400).json({ error: "Event query parameter required" });
+    const bookings = await Booking.find({ event: { $regex: event, $options: "i" } });
+    res.status(200).json(bookings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/bookings/search", async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ error: "Email query parameter required" });
+    const bookings = await Booking.find({ email: email.toLowerCase() });
+    res.status(200).json(bookings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/bookings/:id", async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+    res.status(200).json(booking);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+app.put("/api/bookings/:id", async (req, res) => {
+  try {
+    const updatedBooking = await Booking.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updatedBooking) return res.status(404).json({ error: "Booking not found" });
+    res.json({ message: "Booking updated successfully", updatedBooking });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update booking" });
+  }
+});
+
+
+app.delete("/api/bookings/:id", async (req, res) => {
+  try {
+    const deletedBooking = await Booking.findByIdAndDelete(req.params.id);
+    if (!deletedBooking) return res.status(404).json({ error: "Booking not found" });
+    res.json({ message: "Booking deleted successfully", deletedBooking });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete booking" });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+// export default app;
+
